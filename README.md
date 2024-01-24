@@ -15,3 +15,13 @@ There are a few "sights" you can metaphorically visit in this repository:
 ## Authors
 
 [Peter Goldsborough](https://github.com/goldsborough)
+
+
+# Note from mfbalin
+
+https://pytorch.org/cppdocs/api/library_root.html contains the torch C++ API.
+
+https://pytorch.org/docs/stable/index.html contains the torch python API.
+
+For the data we need to keep for the cache, we can use a global variable for
+now, I can show how to build a data structure and expose it to python after.

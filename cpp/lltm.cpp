@@ -1,5 +1,7 @@
 #include <torch/extension.h>
 
+#include <iostream>
+#include <numeric>
 #include <vector>
 
 // s'(z) = (1 - s(z)) * s(z)
@@ -9,9 +11,7 @@ torch::Tensor d_sigmoid(torch::Tensor z) {
 }
 
 // tanh'(z) = 1 - tanh^2(z)
-torch::Tensor d_tanh(torch::Tensor z) {
-  return 1 - z.tanh().pow(2);
-}
+torch::Tensor d_tanh(torch::Tensor z) { return 1 - z.tanh().pow(2); }
 
 // elu'(z) = relu'(z) + { alpha * exp(z) if (alpha * (exp(z) - 1)) < 0, else 0}
 torch::Tensor d_elu(torch::Tensor z, torch::Scalar alpha = 1.0) {
@@ -20,12 +20,10 @@ torch::Tensor d_elu(torch::Tensor z, torch::Scalar alpha = 1.0) {
   return (z > 0).type_as(z) + mask.type_as(z) * (alpha * e);
 }
 
-std::vector<torch::Tensor> lltm_forward(
-    torch::Tensor input,
-    torch::Tensor weights,
-    torch::Tensor bias,
-    torch::Tensor old_h,
-    torch::Tensor old_cell) {
+std::vector<torch::Tensor> lltm_forward(torch::Tensor input,
+                                        torch::Tensor weights,
+                                        torch::Tensor bias, torch::Tensor old_h,
+                                        torch::Tensor old_cell) {
   auto X = torch::cat({old_h, input}, /*dim=*/1);
 
   auto gate_weights = torch::addmm(bias, X, weights.transpose(0, 1));
@@ -38,25 +36,16 @@ std::vector<torch::Tensor> lltm_forward(
   auto new_cell = old_cell + candidate_cell * input_gate;
   auto new_h = torch::tanh(new_cell) * output_gate;
 
-  return {new_h,
-          new_cell,
-          input_gate,
-          output_gate,
-          candidate_cell,
-          X,
-          gate_weights};
+  return {new_h,          new_cell, input_gate,  output_gate,
+          candidate_cell, X,        gate_weights};
 }
 
-std::vector<torch::Tensor> lltm_backward(
-    torch::Tensor grad_h,
-    torch::Tensor grad_cell,
-    torch::Tensor new_cell,
-    torch::Tensor input_gate,
-    torch::Tensor output_gate,
-    torch::Tensor candidate_cell,
-    torch::Tensor X,
-    torch::Tensor gate_weights,
-    torch::Tensor weights) {
+std::vector<torch::Tensor>
+lltm_backward(torch::Tensor grad_h, torch::Tensor grad_cell,
+              torch::Tensor new_cell, torch::Tensor input_gate,
+              torch::Tensor output_gate, torch::Tensor candidate_cell,
+              torch::Tensor X, torch::Tensor gate_weights,
+              torch::Tensor weights) {
   auto d_output_gate = torch::tanh(new_cell) * grad_h;
   auto d_tanh_new_cell = output_gate * grad_h;
   auto d_new_cell = d_tanh(new_cell) * d_tanh_new_cell + grad_cell;
@@ -84,7 +73,26 @@ std::vector<torch::Tensor> lltm_backward(
   return {d_old_h, d_input, d_weights, d_bias, d_old_cell};
 }
 
+std::tuple<torch::Tensor, torch::Tensor> query_cache(torch::Tensor keys) {
+  TORCH_CHECK(keys.scalar_type() == torch::kLong);
+  auto keys_ptr = keys.data_ptr<int64_t>();
+  auto keys_size = keys.size(0);
+  for (int64_t i = 0; i < keys_size; i++) {
+    std::cerr << keys_ptr[i] << '\n';
+  }
+  auto first_tensor =
+      torch::empty(13, torch::TensorOptions().dtype(torch::kLong));
+  auto first_tensor_ptr = first_tensor.data_ptr<int64_t>();
+  std::iota(first_tensor_ptr, first_tensor_ptr + first_tensor.size(0), 0);
+
+  auto second_tensor =
+      torch::ones(13, torch::TensorOptions().dtype(torch::kLong));
+
+  return {first_tensor, second_tensor};
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("forward", &lltm_forward, "LLTM forward");
   m.def("backward", &lltm_backward, "LLTM backward");
+  m.def("query_cache", &query_cache, "Cache query");
 }

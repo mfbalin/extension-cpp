@@ -71,3 +71,8 @@ backward_average = backward_time / options.runs * scale
 print('Forward: {0:.3f}/{1:.3f} {4} | Backward {2:.3f}/{3:.3f} {4}'.format(
     forward_min, forward_average, backward_min, backward_average,
     options.scale))
+
+
+import lltm_cpp
+
+print(lltm_cpp.query_cache(torch.tensor([1, 3, 5], dtype=torch.int64)))
