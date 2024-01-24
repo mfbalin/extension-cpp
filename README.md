@@ -26,6 +26,8 @@ https://pytorch.org/docs/stable/index.html contains the torch python API.
 For the data we need to keep for the cache, we can use a global variable for
 now, I can show how to build a data structure and expose it to python after.
 
+The C++ implementation is located in the `cpp/lltm.cpp` file.
+
 To run:
 
 pytorch needs to be installed.
