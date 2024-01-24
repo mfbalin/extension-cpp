@@ -37,5 +37,5 @@ Then:
 ```
 cd cpp
 pip install -e .
-python benchmark.py
+python ../benchmark.py
 ```
